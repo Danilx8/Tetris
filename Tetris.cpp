@@ -169,8 +169,6 @@ class field {
 
 };
 
-enum {ABOVE, RSIDE, UNDER, LSIDE} state;
-
 class tetromino {
   public:
     coordinates mainSymbolPosition[100];
@@ -179,21 +177,50 @@ class tetromino {
     coordinates& mainSymbol;
     int height, width;
     char** area[height];
+    enum {ABOVE, RSIDE, UNDER, LSIDE} state;
     enum {CHANGESTATE, LEFT, RIGHT, DOWN} direction;
 
     tetromino():
-      mainSymbolposition() {}
+      state(ABOVE) {}
 
-    
+    void getInput(const field& currentField) {
+      if (GetAsyncKeyState(VK_UP) && (direction != DOWN)) {
+        direction = CHANGESTATE;
+      }
+      if (GetAsyncKeyState(VK_DOWN) && (direction != UP)) {
+        direction = DOWN;
+      }
+      if (GetAsyncKeyState(VK_LEFT) && (direction != RIGHT)) {
+        direction = LEFT;
+      }
+      if (GetAsyncKeyState(VK_RIGHT) && (direction != LEFT)) {
+        direction = RIGHT;
+      }
+    }
 
     void move(const field& currentField) {
       coordinates nextPosition = {0, 0};
       switch(direction) {
         case CHANGESTATE:
-          nextPosition.columnIndex -= speed;
+          switch (state) {
+            case ABOVE:
+              state = state::RSIDE;
+              break;
+            case RSIDE:
+              state = state::UNDER;
+              break;
+            case UNDER:
+              state = state::LSIDE;
+              break;
+            case LSIDE:
+              state = state::ABOVE;
+              break;
+            default:
+              break;
+          }
           break;
         case DOWN:
-          nextPosition.columnIndex += speed;
+          nextPosition.rowIndex += speed;
           break;
         case LEFT:
           nextPosition.rowIndex -= speed;
@@ -201,12 +228,6 @@ class tetromino {
         case RIGHT:
           nextPosition.rowIndex += speed;
           break;
-        default:
-          break;
-          nextPosition.columnIndex = nextPosition.columnIndex;
-          nextPosition.rowIndex = nextPosition.rowIndex;
-          nextPosition.rowIndex = nextPosition.rowIndex;
-          nextPosition.columnIndex = nextPosition.columnIndex;
       }
 
       for (int bodyPartIndex = snakeSize - 1; bodyPartIndex > 0; --bodyPartIndex) {
@@ -214,30 +235,15 @@ class tetromino {
       }
       head.rowIndex += nextPosition.rowIndex;
       head.columnIndex += nextPosition.columnIndex;
+    }
 
-      if (head.columnIndex < 1 ||
-          head.rowIndex < 1 ||
-          head.columnIndex >= currentField.getHeight() - 1||
-          head.rowIndex >= currentField.getWidth() - 1) {
+    for (int bodyPartIndex = snakeSize - 1; bodyPartIndex > 0; --bodyPartIndex) {
+      if (position[0].rowIndex == position[bodyPartIndex].rowIndex &&
+          position[0].columnIndex == position[bodyPartIndex].columnIndex) {
         throw "dead";
-
-      }
-
-      for (int bodyPartIndex = snakeSize - 1; bodyPartIndex > 0; --bodyPartIndex) {
-        if (position[0].rowIndex == position[bodyPartIndex].rowIndex &&
-            position[0].columnIndex == position[bodyPartIndex].columnIndex) {
-          throw "dead";
-        }
       }
     }
-    /*void mainSymbolSwing(int state) {
-      switch(state) {
-        case ABOVE:
-
-      }
-    }*/
-};
-
+}
 
 int main() {
 
