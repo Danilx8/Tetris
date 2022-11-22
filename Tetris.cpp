@@ -13,7 +13,6 @@
 #include <time.h>
 using namespace std;
 
-
 void colorize(int colorNumber) {
   HANDLE hConsole;
   hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -154,18 +153,24 @@ class field {
       }
     }
 
-    void print(char** previousField) {
+    int getWidth() {
+      return width;
+    }
+
+    void print() {
+      setCursorPosition(0,0);
       for (int rowIndex = 1; rowIndex < height - 1; ++rowIndex) {
         for (int columnIndex = 1; columnIndex < width - 1; ++columnIndex) {
-          if (currentField[rowIndex][columnIndex] == previousField[rowIndex][columnIndex]) {
-            continue;
-          }
           cout << currentField[rowIndex][columnIndex];
         }
         cout << endl;
       }
     }
-    
+
+    void spawn(int rowIndex, int columnIndex, char character) {
+      currentField[rowIndex][columnIndex] = character;
+    }
+
     void clear() {
       setCursorPosition(0, 0);
       for(int rowIndex = 1; rowIndex < height - 1; ++rowIndex) {
@@ -176,83 +181,110 @@ class field {
     }
 } gameField;
 
+const int field::height = 30;
+const int field::width = 25;
+const int stickAreaSize = 4;
+
 class tetromino {
   public:
     coordinates mainSymbolPosition[100];
     int speed = 1;
     char symbol = '+';
     coordinates& mainSymbol;
-    static int areaSize;
+    int areaSize;
     char** tetrominoArea;
     enum {ABOVE, RSIDE, UNDER, LSIDE} state;
     enum {CHANGESTATE, LEFT, RIGHT, DOWN} direction;
 
-    tetromino(field& fieldData):
+    tetromino(field& currentField, int figureAreaSize):
+      mainSymbolPosition(),
       state(ABOVE),
       direction(DOWN),
-      mainSymbol(mainSymbolPosition[0]) {
-        tetrominoArea = new char*[areaSize];
-        for (int rowIndex = 0; rowIndex < areaSize; ++rowIndex) {
-          tetrominoArea[rowIndex] = new char[areaSize];
-        }
-       }
+      mainSymbol(mainSymbolPosition[0]),
+      areaSize(figureAreaSize) {
+      tetrominoArea = new char*[areaSize];
+      for (int rowIndex = 0; rowIndex < areaSize; ++rowIndex) {
+        tetrominoArea[rowIndex] = new char[areaSize];
+      }
 
-    void getInput(const field& currentField) {
-      if (GetAsyncKeyState(VK_UP)) {
-        direction = CHANGESTATE;
-      }
-      if (GetAsyncKeyState(VK_DOWN)) {
-        direction = DOWN;
-      }
-      if (GetAsyncKeyState(VK_LEFT)) {
-        direction = LEFT;
-      }
-      if (GetAsyncKeyState(VK_RIGHT)) {
-        direction = RIGHT;
-      }
+      mainSymbolPosition[0].rowIndex = 0;
+      mainSymbolPosition[0].columnIndex = currentField.getWidth() / 2;
     }
 
-    void move(const field& currentField) {
+    void tetrominoSpawn(field& currentField) {
+      currentField.spawn(mainSymbol.rowIndex, mainSymbol.columnIndex, symbol);
+    }
+
+    void move() {
       coordinates nextPosition = {0, 0};
-      switch(direction) {
-        case CHANGESTATE:
-          switch (state) {
-            case ABOVE:
-              state = RSIDE;
-              break;
-            case RSIDE:
-              state = UNDER;
-              break;
-            case UNDER:
-              state = LSIDE;
-              break;
-            case LSIDE:
-              state = ABOVE;
-              break;
-            default:
-              break;
-          }
-          break;
-        case DOWN:
-          nextPosition.rowIndex += speed;
-          break;
-        case LEFT:
-          nextPosition.columnIndex -= speed;
-          break;
-        case RIGHT:
-          nextPosition.columnIndex += speed;
-          break;
+      if (_kbhit()) {
+        switch (_getch()) {
+          case 'w':
+            direction = CHANGESTATE;
+            break;
+          case 's':
+            direction = DOWN;
+            break;
+          case 'a':
+            direction = LEFT;
+            break;
+          case 'd':
+            direction = RIGHT;
+            break;
+        }
+        switch(direction) {
+          case CHANGESTATE:
+            switch (state) {
+              case ABOVE:
+                state = RSIDE;
+                break;
+              case RSIDE:
+                state = UNDER;
+                break;
+              case UNDER:
+                state = LSIDE;
+                break;
+              case LSIDE:
+                state = ABOVE;
+                break;
+              default:
+                break;
+            }
+            break;
+          case DOWN:
+            nextPosition.rowIndex += speed;
+            break;
+          case LEFT:
+            nextPosition.columnIndex -= speed;
+            break;
+          case RIGHT:
+            nextPosition.columnIndex += speed;
+            break;
+          default:
+            break;
+        }
+        mainSymbol.rowIndex += nextPosition.rowIndex;
+        mainSymbol.columnIndex += nextPosition.columnIndex;
       }
-      mainSymbol.rowIndex += nextPosition.rowIndex + 1;
-      mainSymbol.columnIndex += nextPosition.columnIndex;
+      ++mainSymbol.rowIndex;
     }
 };
 
-const int field::height = 30;
-const int field::width = 25;
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
 
 int main() {
   hideCursor();
-  cout << "hello world";
+
+  while (true) {
+    gameStick.move();
+    gameStick.tetrominoSpawn(gameField);
+    gameField.print();
+    gameField.clear();
+    Sleep(100);
+  }
   return 0;
 }
