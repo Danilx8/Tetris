@@ -154,7 +154,7 @@ class field {
       }
     }
 
-    print(char* previousField) {
+    void print(char** previousField) {
       for (int rowIndex = 1; rowIndex < height - 1; ++rowIndex) {
         for (int columnIndex = 1; columnIndex < width - 1; ++columnIndex) {
           if (currentField[rowIndex][columnIndex] == previousField[rowIndex][columnIndex]) {
@@ -165,9 +165,16 @@ class field {
         cout << endl;
       }
     }
-
-
-};
+    
+    void clear() {
+      setCursorPosition(0, 0);
+      for(int rowIndex = 1; rowIndex < height - 1; ++rowIndex) {
+        for(int columnIndex = 1; columnIndex < width - 1; ++columnIndex) {
+          currentField[rowIndex][columnIndex] = ' ';
+        }
+      }
+    }
+} gameField;
 
 class tetromino {
   public:
@@ -175,25 +182,32 @@ class tetromino {
     int speed = 1;
     char symbol = '+';
     coordinates& mainSymbol;
-    int height, width;
-    char** area[height];
+    static int areaSize;
+    char** tetrominoArea;
     enum {ABOVE, RSIDE, UNDER, LSIDE} state;
     enum {CHANGESTATE, LEFT, RIGHT, DOWN} direction;
 
-    tetromino():
-      state(ABOVE) {}
+    tetromino(field& fieldData):
+      state(ABOVE),
+      direction(DOWN),
+      mainSymbol(mainSymbolPosition[0]) {
+        tetrominoArea = new char*[areaSize];
+        for (int rowIndex = 0; rowIndex < areaSize; ++rowIndex) {
+          tetrominoArea[rowIndex] = new char[areaSize];
+        }
+       }
 
     void getInput(const field& currentField) {
-      if (GetAsyncKeyState(VK_UP) && (direction != DOWN)) {
+      if (GetAsyncKeyState(VK_UP)) {
         direction = CHANGESTATE;
       }
-      if (GetAsyncKeyState(VK_DOWN) && (direction != UP)) {
+      if (GetAsyncKeyState(VK_DOWN)) {
         direction = DOWN;
       }
-      if (GetAsyncKeyState(VK_LEFT) && (direction != RIGHT)) {
+      if (GetAsyncKeyState(VK_LEFT)) {
         direction = LEFT;
       }
-      if (GetAsyncKeyState(VK_RIGHT) && (direction != LEFT)) {
+      if (GetAsyncKeyState(VK_RIGHT)) {
         direction = RIGHT;
       }
     }
@@ -204,16 +218,16 @@ class tetromino {
         case CHANGESTATE:
           switch (state) {
             case ABOVE:
-              state = state::RSIDE;
+              state = RSIDE;
               break;
             case RSIDE:
-              state = state::UNDER;
+              state = UNDER;
               break;
             case UNDER:
-              state = state::LSIDE;
+              state = LSIDE;
               break;
             case LSIDE:
-              state = state::ABOVE;
+              state = ABOVE;
               break;
             default:
               break;
@@ -223,29 +237,22 @@ class tetromino {
           nextPosition.rowIndex += speed;
           break;
         case LEFT:
-          nextPosition.rowIndex -= speed;
+          nextPosition.columnIndex -= speed;
           break;
         case RIGHT:
-          nextPosition.rowIndex += speed;
+          nextPosition.columnIndex += speed;
           break;
       }
-
-      for (int bodyPartIndex = snakeSize - 1; bodyPartIndex > 0; --bodyPartIndex) {
-        position[bodyPartIndex] = position[bodyPartIndex - 1];
-      }
-      head.rowIndex += nextPosition.rowIndex;
-      head.columnIndex += nextPosition.columnIndex;
+      mainSymbol.rowIndex += nextPosition.rowIndex + 1;
+      mainSymbol.columnIndex += nextPosition.columnIndex;
     }
+};
 
-    for (int bodyPartIndex = snakeSize - 1; bodyPartIndex > 0; --bodyPartIndex) {
-      if (position[0].rowIndex == position[bodyPartIndex].rowIndex &&
-          position[0].columnIndex == position[bodyPartIndex].columnIndex) {
-        throw "dead";
-      }
-    }
-}
+const int field::height = 30;
+const int field::width = 25;
 
 int main() {
-
+  hideCursor();
+  cout << "hello world";
   return 0;
 }
