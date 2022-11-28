@@ -124,7 +124,38 @@ void getHighestScore() {
   fileParsing(file, "-", 0);
   file.close();
 }
-*/
+
+enum {STICK, GAMMA, ALPHA, SQUARE, SLETTER, TRIANGLE, ZLETTER} tetrominoKind;
+void tetrominoSpawn() {
+  srand(time(0));
+  int figurePicker = rand() % 8;
+  switch (figurePicker) {
+    case STICK:
+      gameStick(gameArea, stickAreaSize)
+      break;
+      case GAMMA:
+
+        break;
+      case ALPHA:
+
+        break;
+      case SQUARE:
+
+        break;
+      case SLETTER:
+
+        break;
+      case TRIANGLE:
+
+        break;
+      case ZLETTER:
+
+        break;
+    default:
+      cout << "Random doesn't work";
+  }
+}*/
+
 struct coordinates {
   int rowIndex, columnIndex;
 };
@@ -153,14 +184,18 @@ class field {
       }
     }
 
+    int getColumn() {
+      return height;
+    }
+
     int getWidth() {
       return width;
     }
 
     void print() {
       setCursorPosition(0,0);
-      for (int rowIndex = 1; rowIndex < height - 1; ++rowIndex) {
-        for (int columnIndex = 1; columnIndex < width - 1; ++columnIndex) {
+      for (int rowIndex = 0; rowIndex < height; ++rowIndex) {
+        for (int columnIndex = 0; columnIndex < width ; ++columnIndex) {
           cout << currentField[rowIndex][columnIndex];
         }
         cout << endl;
@@ -179,6 +214,18 @@ class field {
         }
       }
     }
+
+    void clearLine(int doneLineIndex) {
+      for (int lineIndex = doneLineIndex; lineIndex > 1; --lineIndex) {
+        for (int elementIndex = 0; elementIndex < width; ++elementIndex) {
+          currentField[lineIndex][elementIndex] = currentField[lineIndex - 1][elementIndex];
+        }
+      }
+    }
+
+    char getElement(int rowCoordinate, int columnCoordinate) {
+      return currentField[rowCoordinate][columnCoordinate];
+    }
 } gameField;
 
 const int field::height = 30;
@@ -188,9 +235,11 @@ const int stickAreaSize = 4;
 class tetromino {
   public:
     coordinates mainSymbolPosition[100];
+    coordinates secondarySymbolsPosition[100];
     int speed = 1;
     char symbol = '+';
     coordinates& mainSymbol;
+    coordinates secondarySymbol[3];
     int areaSize;
     char** tetrominoArea;
     enum {ABOVE, RSIDE, UNDER, LSIDE} state;
@@ -198,6 +247,7 @@ class tetromino {
 
     tetromino(field& currentField, int figureAreaSize):
       mainSymbolPosition(),
+      secondarySymbolsPosition(),
       state(ABOVE),
       direction(DOWN),
       mainSymbol(mainSymbolPosition[0]),
@@ -207,15 +257,59 @@ class tetromino {
         tetrominoArea[rowIndex] = new char[areaSize];
       }
 
-      mainSymbolPosition[0].rowIndex = 0;
+      mainSymbolPosition[0].rowIndex = 3;
       mainSymbolPosition[0].columnIndex = currentField.getWidth() / 2;
+    }
+
+    int getColumnIndex() {
+      return mainSymbol.columnIndex;
+    }
+
+    int getRowIndex() {
+      return mainSymbol.rowIndex;
     }
 
     void tetrominoSpawn(field& currentField) {
       currentField.spawn(mainSymbol.rowIndex, mainSymbol.columnIndex, symbol);
+      for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+        currentField.spawn(secondarySymbol[secondarySymbolIndex].rowIndex,
+                           secondarySymbol[secondarySymbolIndex].columnIndex, symbol);
+      }
     }
 
-    void move() {
+    void stateChanger(field& currentField) {
+      switch(state) {
+        case ABOVE:
+          mainSymbol.rowIndex += 1;
+          mainSymbol.columnIndex += 1;
+          state = RSIDE;
+          break;
+        case RSIDE:
+          if (!(currentField.getElement(mainSymbol.rowIndex, mainSymbol.columnIndex - 3) == '#' ||
+                currentField.getElement(mainSymbol.rowIndex, mainSymbol.columnIndex - 3) == '*')) {
+            mainSymbol.rowIndex += 1;
+            mainSymbol.columnIndex -= 1;
+            state = UNDER;
+          }
+          break;
+        case UNDER:
+          if (!((mainSymbol.columnIndex > currentField.getWidth()) || (mainSymbol.columnIndex <= 3))) {
+            mainSymbol.rowIndex -= 1;
+            mainSymbol.columnIndex -= 1;
+            state = LSIDE;
+          }
+          break;
+        case LSIDE:
+          mainSymbol.rowIndex -= 1;
+          mainSymbol.columnIndex += 1;
+          state = ABOVE;
+          break;
+        default:
+          break;
+      }
+    }
+
+    void move(field& currentField) {
       coordinates nextPosition = {0, 0};
       if (_kbhit()) {
         switch (_getch()) {
@@ -234,41 +328,96 @@ class tetromino {
         }
         switch(direction) {
           case CHANGESTATE:
-            switch (state) {
-              case ABOVE:
-                state = RSIDE;
-                break;
-              case RSIDE:
-                state = UNDER;
-                break;
-              case UNDER:
-                state = LSIDE;
-                break;
-              case LSIDE:
-                state = ABOVE;
-                break;
-              default:
-                break;
-            }
+            stateChanger(gameField);
             break;
           case DOWN:
             nextPosition.rowIndex += speed;
+            for (int secondarySymbolsIndex = 0; secondarySymbolsIndex < 3; ++secondarySymbolsIndex) {
+              secondarySymbol[secondarySymbolsIndex].rowIndex += speed;
+            }
             break;
           case LEFT:
-            nextPosition.columnIndex -= speed;
+            if (!(currentField.getElement(secondarySymbol[2].rowIndex, secondarySymbol[2].columnIndex - 1) == '#' ||
+                  currentField.getElement(secondarySymbol[2].rowIndex, secondarySymbol[2].columnIndex - 1) == '*') ) {
+              nextPosition.columnIndex -= speed;
+              for (int secondarySymbolsIndex = 0; secondarySymbolsIndex < 3; ++secondarySymbolsIndex) {
+                secondarySymbol[secondarySymbolsIndex].columnIndex -= speed;
+              }
+            }
             break;
           case RIGHT:
-            nextPosition.columnIndex += speed;
+            if (!(currentField.getElement(secondarySymbol[0].rowIndex, secondarySymbol[0].columnIndex + 1) == '#' ||
+                  currentField.getElement(secondarySymbol[2].rowIndex, secondarySymbol[2].columnIndex + 1) == '*') ) {
+              nextPosition.columnIndex += speed;
+              for (int secondarySymbolsIndex = 0; secondarySymbolsIndex < 3; ++secondarySymbolsIndex) {
+                secondarySymbol[secondarySymbolsIndex].columnIndex += speed;
+              }
+            }
             break;
           default:
             break;
         }
-        mainSymbol.rowIndex += nextPosition.rowIndex;
+
         mainSymbol.columnIndex += nextPosition.columnIndex;
+        mainSymbol.rowIndex += nextPosition.rowIndex;
       }
-      ++mainSymbol.rowIndex;
+    }
+
+    void tetrominoSink() {
+      mainSymbol.rowIndex += 1;
+      for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+        ++secondarySymbol[secondarySymbolIndex].rowIndex;
+      }
     }
 };
+
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {}
+
+    void secondarySymbolsConcatenation () {
+      switch(state) {
+        case ABOVE:
+          for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+            secondarySymbol[secondarySymbolIndex].rowIndex = mainSymbol.rowIndex;
+          }
+          secondarySymbol[0].columnIndex = mainSymbol.columnIndex + 1;
+          secondarySymbol[1].columnIndex = mainSymbol.columnIndex - 1;
+          secondarySymbol[2].columnIndex = mainSymbol.columnIndex - 2;
+          break;
+        case RSIDE:
+          for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+            secondarySymbol[secondarySymbolIndex].columnIndex = mainSymbol.columnIndex;
+          }
+          secondarySymbol[0].rowIndex = mainSymbol.rowIndex + 1;
+          secondarySymbol[1].rowIndex = mainSymbol.rowIndex - 1;
+          secondarySymbol[2].rowIndex = mainSymbol.rowIndex - 2;
+          break;
+        case UNDER:
+          for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+            secondarySymbol[secondarySymbolIndex].rowIndex = mainSymbol.rowIndex;
+          }
+          secondarySymbol[0].columnIndex = mainSymbol.columnIndex + 1;
+          secondarySymbol[1].columnIndex = mainSymbol.columnIndex - 1;
+          secondarySymbol[2].columnIndex = mainSymbol.columnIndex - 2;
+          break;
+        case LSIDE:
+          for (int secondarySymbolIndex = 0; secondarySymbolIndex < 3; ++secondarySymbolIndex) {
+            secondarySymbol[secondarySymbolIndex].columnIndex = mainSymbol.columnIndex;
+          }
+          secondarySymbol[0].rowIndex = mainSymbol.rowIndex + 1;
+          secondarySymbol[1].rowIndex = mainSymbol.rowIndex - 1;
+          secondarySymbol[2].rowIndex = mainSymbol.rowIndex - 2;
+          break;
+      }
+    }
+} gameStick(gameField, stickAreaSize);
+/*
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
 
 class stick: public tetromino {
   public:
@@ -276,15 +425,48 @@ class stick: public tetromino {
     }
 } gameStick(gameField, stickAreaSize);
 
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
+
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
+
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
+
+class stick: public tetromino {
+  public:
+    stick(field& currentField, const int areaSize): tetromino(currentField, areaSize) {
+    }
+} gameStick(gameField, stickAreaSize);
+*/
+
 int main() {
   hideCursor();
-
   while (true) {
-    gameStick.move();
-    gameStick.tetrominoSpawn(gameField);
     gameField.print();
-    gameField.clear();
-    Sleep(100);
+
+    time_t endwait;
+    int seconds = 2;
+    endwait = time(NULL) + seconds;
+    while (time(NULL) < endwait) {
+      gameStick.move(gameField);
+      gameStick.secondarySymbolsConcatenation();
+      gameStick.tetrominoSpawn(gameField);
+      gameField.print();
+      gameField.clear();
+    }
+
+    //gameStick.tetrominoSink();
   }
   return 0;
 }
