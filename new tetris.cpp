@@ -1,433 +1,403 @@
-#include <iomanip>
+#include <time.h>
 #include <iostream>
 #include <vector>
-#include <random>
+#include <windows.h>
 #include <conio.h>
 
-struct Random
-{
-    Random(int min, int max)
-        : mUniformDistribution(min, max)
-    {}
+using namespace std;
 
-    int operator()()
-    {
-        return mUniformDistribution(mEngine);
-    }
+void colorize(int colorNumber) {
+  HANDLE hConsole;
+  hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  SetConsoleTextAttribute(hConsole, colorNumber);
+}
 
-    std::default_random_engine mEngine{ std::random_device()() };
-    std::uniform_int_distribution<int> mUniformDistribution;
+void setCursorPosition(int x, int y) {
+  static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+  cout.flush();
+  COORD coord = { (SHORT)x, (SHORT)y };
+  SetConsoleCursorPosition(hOut, coord);
+}
+
+void hideCursor() {
+  HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+  CONSOLE_CURSOR_INFO info;
+  info.dwSize = 100;
+  info.bVisible = FALSE;
+  SetConsoleCursorInfo(consoleHandle, &info);
+}
+
+const int FIELD_HEIGHT = 22;
+const int FIELD_WIDTH = 12;
+enum {EMPTINESS, BLOCK, WALL = 9} elementsCodes;
+
+vector<vector<int>> stage(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
+vector<vector<int>> block = {
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 0 }
 };
 
-std::vector<std::vector<int>> stage(22, std::vector<int>(13, 0));
-std::vector<std::vector<int>> block = 
-{ 
-    { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 },
-    { 0, 0, 0, 0 } 
-};
 
-std::vector<std::vector<int>> field(22, std::vector<int>(13, 0));
+vector<vector<int>> field(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
 // coordinate
-int y = 0; 
-int x = 4;
+int y;
+int x;
+
 bool gameover = false;
-size_t GAMESPEED = 20000; 
+const int GAMESPEED = 20000;
 
-Random getRandom{ 0, 6 };
-
-std::vector<std::vector<std::vector<int>>> block_list =
-{ 
-    { 
-        { 0, 1, 0, 0 },
-        { 0, 1, 0, 0 },
-        { 0, 1, 0, 0 },
-        { 0, 1, 0, 0 } 
-    },
-    { 
-        { 0, 0, 0, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 1, 0, 0 },
-        { 0, 1, 0, 0 } 
-    },
-    { 
-        { 0, 0, 1, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 1, 0, 0 },
-        { 0, 0, 0, 0 } 
-    },
-    { 
-        { 0, 1, 0, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 0, 1, 0 },
-        { 0, 0, 0, 0 } 
-    },
-    { 
-        { 0, 0, 0, 0 },
-        { 0, 1, 0, 0 },
-        { 1, 1, 1, 0 },
-        { 0, 0, 0, 0 } 
-    },
-    { 
-        { 0, 0, 0, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 0, 0, 0 } 
-    },
-    { 
-        { 0, 0, 0, 0 },
-        { 0, 1, 1, 0 },
-        { 0, 0, 1, 0 },
-        { 0, 0, 1, 0 } 
-    } 
+vector<vector<vector<int>>> block_list = {
+  {
+    { 0, 1, 0, 0 },
+    { 0, 1, 0, 0 },
+    { 0, 1, 0, 0 },
+    { 0, 1, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 0, 1, 0, 0 }
+  },
+  {
+    { 0, 0, 1, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 1, 0, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 0, 1, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 1, 0, 0 },
+    { 1, 1, 1, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 0, 1, 0 },
+    { 0, 0, 1, 0 }
+  }
 };
 
-int menu(); 
-int gameOver(); 
-void title(); 
-void gameLoop(); 
-void display(); 
-bool makeBlocks(); 
-void initGame(); 
-void moveBlock(int, int); 
+int menu();
+int gameOver();
+void title();
+void gameLoop();
+void display();
+bool makeBlocks();
+void initGame();
+void moveBlock(int, int);
 void collidable();
-bool isCollide(int, int); 
-void userInput(); 
-bool rotateBolck(); 
-void spwanBlock(); 
+bool isCollide(int, int);
+void userInput();
+bool rotateBlock();
+void spawnBlock();
+void setFigureIntitalPosition();
+void cleanLine(int);
 
-int main()
-{
-    switch (menu())
-    {
-    case 1:
-        gameLoop();
-        break;
-    case 2:
-        return 0;
-    case 0:
-        std::cerr << "Choose 1~2" << std::endl;
-        return -1;
-    }
-    return 0;
+int main() {
+  setFigureIntitalPosition();
+  menu();
+  return 0;
 }
 
-int gameOver()
-{
-    using namespace std;
-
-    char a;
-    cout << " #####     #    #     # ####### ####### #     # ####### ######\n" ;
-    cout << "#     #   # #   ##   ## #       #     # #     # #       #     #\n";
-    cout << "#        #   #  # # # # #       #     # #     # #       #     #\n";
-    cout << "#  #### #     # #  #  # #####   #     # #     # #####   ######\n";
-    cout << "#     # ####### #     # #       #     #  #   #  #       #   #\n";
-    cout << "#     # #     # #     # #       #     #   # #   #       #    #\n";
-    cout << " #####  #     # #     # ####### #######    #    ####### #     #\n";
-    cout << "\n\nPress any key and enter\n";
-    cin >> a;
-    return 0;
+int gameOver() {
+  char a;
+  cout << " #####     #    #     # ####### ####### #     # ####### ######\n" ;
+  cout << "#     #   # #   ##   ## #       #     # #     # #       #     #\n";
+  cout << "#        #   #  # # # # #       #     # #     # #       #     #\n";
+  cout << "#  #### #     # #  #  # #####   #     # #     # #####   ######\n";
+  cout << "#     # ####### #a     # #       #     #  #   #  #       #   #\n";
+  cout << "#     # #     # #     # #       #     #   # #   #       #    #\n";
+  cout << " #####  #     # #     # ####### #######    #    ####### #     #\n";
+  cout << "\n\nPress any key and enter\n";
+  cin >> a;
+  return 0;
 }
 
-void gameLoop()
-{
-    size_t time = 0;
-    initGame();
+void gameLoop() {
+  system("cls");
+  hideCursor();
+  time_t endwait;
+  double seconds = 1;
+  endwait = time(NULL) + seconds;
+  initGame();
 
-    while (!gameover) 
-    { 
-        if (kbhit()) 
-        {
-            userInput();
-        }
-
-        if (time < GAMESPEED)
-        {
-            time++;
-        }
-        else 
-        {
-            spwanBlock();
-            time = 0;
-        }
+  while (!gameover) {
+    while (time(NULL) < endwait) {
+      if (kbhit()) {
+        userInput();
+      }
     }
 
+    spawnBlock();
+    endwait = time(NULL) + seconds;
+  }
+
 }
 
-int menu()
-{
-    title();
+void setFigureIntitalPosition() {
+  y = 0;
+  x = FIELD_WIDTH / 3;
+}
 
-    int select_num = 0;
+int menu() {
+  title();
 
-    std::cin >> select_num;
+  int select_num = 0;
 
-    switch (select_num)
-    {
+  cin >> select_num;
+
+  switch (select_num) {
     case 1:
+      gameLoop();
+      break;
     case 2:
+      break;
     case 3:
-        break;
+      break;
     default:
-        select_num = 0;
-        break;
-    }
-
-    return select_num;
+      cerr << "Choose 1~2" << endl;
+      _getch();
+      select_num = 0;
+      main();
+      break;
+  }
+  system("cls");
+  return select_num;
 }
 
-void title()
-{
-    using namespace std;
+void title() {
+  system("cls");
 
+  cout << "#==============================================================================#\n";
+
+  cout << "####### ####### ####### ######    ###    #####\n";
+  cout << "   #    #          #    #     #    #    #     #\n";
+  cout << "   #    #          #    #     #    #    #\n";
+  cout << "   #    #####      #    ######     #     #####\n";
+  cout << "   #    #          #    #   #      #          #\n";
+  cout << "   #    #          #    #    #     #    #     #\n";
+  cout << "   #    #######    #    #     #   ###    #####\t\tmade for fun \n";
+  cout << "\n\n\n\n";
+
+  cout << "\t<Menu>\n";
+  cout << "\t1: Start Game\n\t2: Quit\n\n";
+
+  cout << "#==============================================================================#\n";
+  cout << "Choose >> ";
+}
+
+void display() {
+  setCursorPosition(0, 0);
+
+  for (int i = 0; i < FIELD_HEIGHT; i++) {
+    cout << "\t\t";
+    for (int j = 0; j < FIELD_WIDTH; j++) {
+      switch (field[i][j]) {
+        case EMPTINESS:
+          cout << " " << flush;
+          break;
+        case WALL:
+          cout << "#" << flush;
+          break;
+        default:
+          cout << "@" << flush;
+          break;
+      }
+    }
+    cout << endl;
+  }
+
+  cout << "\nA: left\tS: down\tD: right \t Rotation[Space]";
+
+  if (gameover) {
     system("cls");
-
-    cout << "#==============================================================================#\n";
-
-    cout << "####### ####### ####### ######    ###    #####\n";
-    cout << "   #    #          #    #     #    #    #     #\n";
-    cout << "   #    #          #    #     #    #    #\n";
-    cout << "   #    #####      #    ######     #     #####\n";
-    cout << "   #    #          #    #   #      #          #\n";
-    cout << "   #    #          #    #    #     #    #     #\n";
-    cout << "   #    #######    #    #     #   ###    #####\t\tmade for fun \n";
-    cout << "\n\n\n\n";
-
-    cout << "\t<Menu>\n";
-    cout << "\t1: Start Game\n\t2: Quit\n\n";
-
-    cout << "#==============================================================================#\n";
-    cout << "Choose >> ";
+    gameOver();
+  }
 }
 
-void display()
-{
-    system("cls");
-
-    for (size_t i = 0; i < 21; i++) 
-    {
-        for (size_t j = 0; j < 12; j++) 
-        {
-            switch (field[i][j]) 
-            {
-            case 0:
-                std::cout << " " << std::flush;
-                break;
-            case 9:
-                std::cout << "@" << std::flush;
-                break;
-            default:
-                std::cout << "#" << std::flush;
-                break;
-            }
-        }
-        std::cout << std::endl;
+void initGame() {
+  for (int i = 0; i < FIELD_HEIGHT; i++) {
+    for (int j = 0; j < FIELD_WIDTH; j++) {
+      if ((j == 0) || (j == FIELD_WIDTH - 1) || (i == FIELD_HEIGHT - 1)) {
+        field[i][j] = stage[i][j] = 9;
+      } else {
+        field[i][j] = stage[i][j] = 0;
+      }
     }
+  }
 
-    std::cout << "\n\tA: left\tS: down\tD: right \t Rotation[Space]";
+  makeBlocks();
 
-    if (gameover)
-    {
-        system("cls");
-        gameOver();
-    }
+  display();
 }
 
-void initGame()
-{
-    for (size_t i = 0; i <= 20; i++)
-    {
-        for (size_t j = 0; j <= 11; j++)
-        {
-            if ((j == 0) || (j == 11) || (i == 20)) 
-            {
-                field[i][j] = stage[i][j] = 9;
-            }
-            else
-            {
-                field[i][j] = stage[i][j] = 0;
-            }
-        }
+bool makeBlocks() {
+  setFigureIntitalPosition();
+  srand(time(0));
+
+  int blockType = rand() % 7;
+
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      block[i][j] = 0;
+      block[i][j] = block_list[blockType][i][j];
     }
+  }
 
-    makeBlocks();
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      field[i][j + 4] = stage[i][j + 4] + block[i][j];
 
-    display();
-}
-
-bool makeBlocks()
-{
-    x = 4;
-    y = 0;
-
-    int blockType = getRandom();
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            block[i][j] = 0;
-            block[i][j] = block_list[blockType][i][j];
-        }
-    }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            field[i][j + 4] = stage[i][j + 4] + block[i][j];
-
-            if (field[i][j + 4] > 1)
-            {
-                gameover = true;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-void moveBlock(int x2, int y2)
-{
-
-    //Remove block
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            field[y + i][x + j] -= block[i][j];
-        }
-    }
-    //Update coordinates
-    x = x2;
-    y = y2;
-
-    // assign a block with the updated value
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            field[y + i][x + j] += block[i][j];
-        }
-    }
-
-    display();
-}
-
-void collidable()
-{
-    for (size_t i = 0; i<21; i++)
-    {
-        for (size_t j = 0; j<12; j++)
-        {
-            stage[i][j] = field[i][j];
-        }
-    }
-}
-
-bool isCollide(int x2, int y2)
-{
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            if (block[i][j] && stage[y2 + i][x2 + j] != 0)
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-void userInput()
-{
-    char key;
-
-    key = getch();
-
-    switch (key)
-    {
-    case 'd':
-        if (!isCollide(x + 1, y))
-        {
-            moveBlock(x + 1, y);
-        }
-        break;
-    case 'a':
-        if (!isCollide(x - 1, y))
-        {
-            moveBlock(x - 1, y);
-        }
-        break;
-    case 's':
-        if (!isCollide(x, y + 1))
-        {
-            moveBlock(x, y + 1);
-        }
-        break;
-    case ' ':
-        rotateBolck();
-    }
-}
-
-bool rotateBolck()
-{
-    std::vector<std::vector<int>> tmp(4, std::vector<int>(4, 0));
-
-    for (size_t i = 0; i < 4; i++)
-    { //Save temporarily block
-        for (size_t j = 0; j < 4; j++)
-        {
-            tmp[i][j] = block[i][j];
-        }
-    }
-
-    for (size_t i = 0; i < 4; i++)
-    { //Rotate
-        for (size_t j = 0; j < 4; j++)
-        {
-            block[i][j] = tmp[3 - j][i];
-        }
-    }
-
-    if (isCollide(x, y))
-    { // And stop if it overlaps not be rotated
-        for (size_t i = 0; i < 4; i++)
-        {
-            for (size_t j = 0; j < 4; j++)
-            {
-                block[i][j] = tmp[i][j];
-            }
-        }
+      if (field[i][j + 4] > 1) {
+        gameover = true;
         return true;
+      }
     }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        for (size_t j = 0; j < 4; j++)
-        {
-            field[y + i][x + j] -= tmp[i][j];
-            field[y + i][x + j] += block[i][j];
-        }
-    }
-
-    display();
-
-    return false;
+  }
+  return false;
 }
 
-void spwanBlock()
-{
-    if (!isCollide(x, y + 1))
-    {
+void moveBlock(int x2, int y2) {
+  //Remove block
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      field[y + i][x + j] -= block[i][j];
+    }
+  }
+  //Update coordinates
+  x = x2;
+  y = y2;
+
+  // assign a block with the updated value
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      field[y + i][x + j] += block[i][j];
+    }
+  }
+
+  display();
+}
+
+void collidable() {
+  int sameElementsCounter;
+  for (int i = 0; i < FIELD_HEIGHT; i++) {
+    sameElementsCounter = 0;
+    for (int j = 0; j < FIELD_WIDTH; j++) {
+        if (stage[i][j] == '@') {
+          ++sameElementsCounter;
+        }
+    }
+    if (sameElementsCounter == FIELD_WIDTH - 2) {
+      cleanLine(i);
+    }
+    for (int j = 0; j < FIELD_WIDTH; j++) {
+      stage[i][j] = field[i][j];
+    }
+  }
+}
+
+void cleanLine(int lineNumber) {
+  for (int i = lineNumber; i > 1; --i) {
+    for (int j = 0; j < FIELD_WIDTH; ++j) {
+      stage[i][j] = stage[i+1][j];
+    }
+  }
+}
+
+bool isCollide(int x2, int y2) {
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (block[i][j] && stage[y2 + i][x2 + j] != 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void userInput() {
+  switch (_getch()) {
+    case 'd':
+      if (!isCollide(x + 1, y)) {
+        moveBlock(x + 1, y);
+      }
+      break;
+    case 'a':
+      if (!isCollide(x - 1, y)) {
+        moveBlock(x - 1, y);
+      }
+      break;
+    case 's':
+      if (!isCollide(x, y + 1)) {
         moveBlock(x, y + 1);
+      }
+      break;
+    case 'w':
+      rotateBlock();
+  }
+}
+
+bool rotateBlock() {
+  vector<vector<int>> tmp(4, vector<int>(4, 0));
+
+  for (int i = 0; i < 4; i++) {
+    //Save temporarily block
+    for (int j = 0; j < 4; j++) {
+      tmp[i][j] = block[i][j];
     }
-    else
-    {
-        collidable();
-        makeBlocks();
-        display();
+  }
+
+  for (int i = 0; i < 4; i++) {
+    //Rotate
+    for (int j = 0; j < 4; j++) {
+      block[i][j] = tmp[3 - j][i];
     }
+  }
+
+  if (isCollide(x, y)) {
+    // And stop if it overlaps not be rotated
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 4; j++) {
+        block[i][j] = tmp[i][j];
+      }
+    }
+    return true;
+  }
+
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      field[y + i][x + j] -= tmp[i][j];
+      field[y + i][x + j] += block[i][j];
+    }
+  }
+
+  display();
+
+  return false;
+}
+
+void spawnBlock() {
+  if (!isCollide(x, y + 1)) {
+    moveBlock(x, y + 1);
+  } else {
+    collidable();
+    makeBlocks();
+    display();
+  }
 }
