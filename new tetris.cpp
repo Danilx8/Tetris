@@ -39,9 +39,7 @@ vector<vector<int>> block = {
   { 0, 0, 0, 0 }
 };
 
-
 vector<vector<int>> field(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
-// coordinate
 int y;
 int x;
 
@@ -117,37 +115,43 @@ int main() {
 
 int gameOver() {
   char a;
-  cout << " #####     #    #     # ####### ####### #     # ####### ######\n" ;
-  cout << "#     #   # #   ##   ## #       #     # #     # #       #     #\n";
-  cout << "#        #   #  # # # # #       #     # #     # #       #     #\n";
-  cout << "#  #### #     # #  #  # #####   #     # #     # #####   ######\n";
-  cout << "#     # ####### #a     # #       #     #  #   #  #       #   #\n";
-  cout << "#     # #     # #     # #       #     #   # #   #       #    #\n";
-  cout << " #####  #     # #     # ####### #######    #    ####### #     #\n";
-  cout << "\n\nPress any key and enter\n";
+  cout << " d888b   .d8b.  .88b  d88. d88888b    .d88b.  db    db d88888b d8888b. \n"
+          "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n;"
+          "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
+          "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
+          "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
+          " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n";
+  cout << "\nPlay again? press y for yes or n for no:\n";
   cin >> a;
+  if (a == 'y' || a == 'Y') {
+    gameover = false;
+    main();
+  }
   return 0;
 }
 
 void gameLoop() {
   system("cls");
   hideCursor();
-  time_t endwait;
-  double seconds = 1;
-  endwait = time(NULL) + seconds;
+  double currentTime;
+  double delay = 0.1;
+  double nextFrameTime = currentTime + delay;
   initGame();
 
   while (!gameover) {
-    while (time(NULL) < endwait) {
+    currentTime = time(NULL);
+    while (currentTime < nextFrameTime) {
       if (kbhit()) {
         userInput();
       }
     }
 
     spawnBlock();
-    endwait = time(NULL) + seconds;
+    currentTime = time(NULL);
   }
-
+  nextFrameTime = currentTime + delay;
+  //currentTime = time(NULL);
+  //nextFrameTime = currentTime + delay;
 }
 
 void setFigureIntitalPosition() {
@@ -184,22 +188,15 @@ int menu() {
 void title() {
   system("cls");
 
-  cout << "#==============================================================================#\n";
-
-  cout << "####### ####### ####### ######    ###    #####\n";
-  cout << "   #    #          #    #     #    #    #     #\n";
-  cout << "   #    #          #    #     #    #    #\n";
-  cout << "   #    #####      #    ######     #     #####\n";
-  cout << "   #    #          #    #   #      #          #\n";
-  cout << "   #    #          #    #    #     #    #     #\n";
-  cout << "   #    #######    #    #     #   ###    #####\t\tmade for fun \n";
-  cout << "\n\n\n\n";
-
-  cout << "\t<Menu>\n";
-  cout << "\t1: Start Game\n\t2: Quit\n\n";
-
-  cout << "#==============================================================================#\n";
-  cout << "Choose >> ";
+  cout << "#==============================================================================#\n\n"
+       "          _|_|_|_|_|  _|_|_|_|  _|_|_|_|_|  _|_|_|    _|_|_|    _|_|_| \n"
+       "              _|      _|            _|      _|    _|    _|    _| \n"
+       "              _|      _|_|_|        _|      _|_|_|      _|      _|_| \n"
+       "              _|      _|            _|      _|    _|    _|          _| \n"
+       "              _|      _|_|_|_|      _|      _|    _|  _|_|_|   _|_|_| \n"
+       "\n\t1: Start Game\n\t2: Quit\n\n"
+       "#==============================================================================#\n"
+       "Choose >> ";
 }
 
 void display() {
@@ -210,13 +207,13 @@ void display() {
     for (int j = 0; j < FIELD_WIDTH; j++) {
       switch (field[i][j]) {
         case EMPTINESS:
-          cout << " " << flush;
+          cout << " ";
           break;
         case WALL:
-          cout << "#" << flush;
+          cout << "#";
           break;
         default:
-          cout << "@" << flush;
+          cout << "@";
           break;
       }
     }
@@ -299,23 +296,22 @@ void collidable() {
   for (int i = 0; i < FIELD_HEIGHT; i++) {
     sameElementsCounter = 0;
     for (int j = 0; j < FIELD_WIDTH; j++) {
-        if (stage[i][j] == '@') {
-          ++sameElementsCounter;
-        }
-    }
-    if (sameElementsCounter == FIELD_WIDTH - 2) {
-      cleanLine(i);
-    }
-    for (int j = 0; j < FIELD_WIDTH; j++) {
       stage[i][j] = field[i][j];
+      if (stage[i][j] == BLOCK) {
+        ++sameElementsCounter;
+      }
+    }
+    if (sameElementsCounter == 10) {
+      cleanLine(i);
     }
   }
 }
 
 void cleanLine(int lineNumber) {
-  for (int i = lineNumber; i > 1; --i) {
+  for (int i = lineNumber; i > 2; --i) {
     for (int j = 0; j < FIELD_WIDTH; ++j) {
-      stage[i][j] = stage[i+1][j];
+      field[i][j] = field[i-1][j];
+      stage[i][j] = stage[i-1][j];
     }
   }
 }
@@ -323,7 +319,7 @@ void cleanLine(int lineNumber) {
 bool isCollide(int x2, int y2) {
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      if (block[i][j] && stage[y2 + i][x2 + j] != 0) {
+      if (block[i][j] && stage[y2 + i][x2 + j] != EMPTINESS) {
         return true;
       }
     }
