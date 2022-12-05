@@ -3,6 +3,8 @@
 #include <vector>
 #include <windows.h>
 #include <conio.h>
+#include <limits>
+#include <chrono>
 
 using namespace std;
 
@@ -116,11 +118,11 @@ int main() {
 int gameOver() {
   char a;
   cout << " d888b   .d8b.  .88b  d88. d88888b    .d88b.  db    db d88888b d8888b. \n"
-          "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n;"
-          "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
-          "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
-          "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
-          " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n";
+       "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n;"
+       "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
+       "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
+       "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
+       " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n";
   cout << "\nPlay again? press y for yes or n for no:\n";
   cin >> a;
   if (a == 'y' || a == 'Y') {
@@ -133,25 +135,25 @@ int gameOver() {
 void gameLoop() {
   system("cls");
   hideCursor();
-  double currentTime;
-  double delay = 0.1;
-  double nextFrameTime = currentTime + delay;
   initGame();
+  auto start = chrono::steady_clock::now();
+  int delay = 1000;
 
   while (!gameover) {
-    currentTime = time(NULL);
-    while (currentTime < nextFrameTime) {
-      if (kbhit()) {
-        userInput();
-      }
+    auto end = chrono::steady_clock::now();
+    auto passedTime = chrono::duration_cast<chrono::milliseconds>(end - start);
+    if (kbhit()) {
+      userInput();
     }
 
-    spawnBlock();
-    currentTime = time(NULL);
+    if (passedTime.count() >= delay) {
+      spawnBlock();
+      if (delay != 100) {
+        delay -= 1;
+      }
+      start = chrono::steady_clock::now();
+    }
   }
-  nextFrameTime = currentTime + delay;
-  //currentTime = time(NULL);
-  //nextFrameTime = currentTime + delay;
 }
 
 void setFigureIntitalPosition() {
@@ -177,6 +179,8 @@ int menu() {
     default:
       cerr << "Choose 1~2" << endl;
       _getch();
+      cin.clear();
+      cin.ignore(numeric_limits<streamsize>::max(),'\n');
       select_num = 0;
       main();
       break;
