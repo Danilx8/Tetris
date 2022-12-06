@@ -31,7 +31,26 @@ void hideCursor() {
 
 const int FIELD_HEIGHT = 22;
 const int FIELD_WIDTH = 12;
-enum {EMPTINESS, BLOCK, WALL = 9} elementsCodes;
+enum {
+  EMPTINESS = 0,
+  I_BLOCK,
+  J_BLOCK,
+  Z_BLOCK,
+  S_BLOCK,
+  T_BLOCK,
+  O_BLOCK,
+  L_BLOCK,
+  WALL = 9
+} elementsCodes;
+const int I_COLOR = 11;
+const int J_COLOR = 1;
+const int Z_COLOR = 4;
+const int S_COLOR = 10;
+const int T_COLOR = 13;
+const int O_COLOR = 14;
+const int L_COLOR = 6;
+const int WALLS_COLOR = 15;
+const int BACKGROUND_COLOR = 0;
 
 vector<vector<int>> stage(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
 vector<vector<int>> block = {
@@ -46,7 +65,10 @@ int y;
 int x;
 
 bool gameover = false;
-const int GAMESPEED = 20000;
+int GAMESPEED = 1000;
+int level = 0;
+int score = 0;
+int blockType;
 
 vector<vector<vector<int>>> block_list = {
   {
@@ -57,39 +79,39 @@ vector<vector<vector<int>>> block_list = {
   },
   {
     { 0, 0, 0, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 1, 0, 0 },
-    { 0, 1, 0, 0 }
+    { 0, 2, 2, 0 },
+    { 0, 2, 0, 0 },
+    { 0, 2, 0, 0 }
   },
   {
-    { 0, 0, 1, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 1, 0, 0 },
+    { 0, 0, 3, 0 },
+    { 0, 3, 3, 0 },
+    { 0, 3, 0, 0 },
     { 0, 0, 0, 0 }
   },
   {
-    { 0, 1, 0, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 0, 1, 0 },
-    { 0, 0, 0, 0 }
-  },
-  {
-    { 0, 0, 0, 0 },
-    { 0, 1, 0, 0 },
-    { 1, 1, 1, 0 },
+    { 0, 4, 0, 0 },
+    { 0, 4, 4, 0 },
+    { 0, 0, 4, 0 },
     { 0, 0, 0, 0 }
   },
   {
     { 0, 0, 0, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 1, 1, 0 },
+    { 0, 5, 0, 0 },
+    { 5, 5, 5, 0 },
     { 0, 0, 0, 0 }
   },
   {
     { 0, 0, 0, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 0, 1, 0 },
-    { 0, 0, 1, 0 }
+    { 0, 6, 6, 0 },
+    { 0, 6, 6, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 7, 7, 0 },
+    { 0, 0, 7, 0 },
+    { 0, 0, 7, 0 }
   }
 };
 
@@ -116,14 +138,14 @@ int main() {
 }
 
 int gameOver() {
-  char a;
   cout << " d888b   .d8b.  .88b  d88. d88888b    .d88b.  db    db d88888b d8888b. \n"
-       "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n;"
+       "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n"
        "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
        "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
        "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
        " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n";
   cout << "\nPlay again? press y for yes or n for no:\n";
+  char a;
   cin >> a;
   if (a == 'y' || a == 'Y') {
     gameover = false;
@@ -137,7 +159,6 @@ void gameLoop() {
   hideCursor();
   initGame();
   auto start = chrono::steady_clock::now();
-  int delay = 1000;
 
   while (!gameover) {
     auto end = chrono::steady_clock::now();
@@ -146,11 +167,8 @@ void gameLoop() {
       userInput();
     }
 
-    if (passedTime.count() >= delay) {
+    if (passedTime.count() >= GAMESPEED) {
       spawnBlock();
-      if (delay != 100) {
-        delay -= 1;
-      }
       start = chrono::steady_clock::now();
     }
   }
@@ -197,8 +215,10 @@ void title() {
        "              _|      _|            _|      _|    _|    _|    _| \n"
        "              _|      _|_|_|        _|      _|_|_|      _|      _|_| \n"
        "              _|      _|            _|      _|    _|    _|          _| \n"
-       "              _|      _|_|_|_|      _|      _|    _|  _|_|_|   _|_|_| \n"
-       "\n\t1: Start Game\n\t2: Quit\n\n"
+       "              _|      _|_|_|_|      _|      _|    _|  _|_|_|   _|_|_| \n\n"
+       "                                1: Start Game\n"
+       "                                2:  Quit\n\n"
+       "Check your keyboard language and caps lock!\n"
        "#==============================================================================#\n"
        "Choose >> ";
 }
@@ -206,25 +226,58 @@ void title() {
 void display() {
   setCursorPosition(0, 0);
 
-  for (int i = 0; i < FIELD_HEIGHT; i++) {
+  for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; rowIndex++) {
     cout << "\t\t";
-    for (int j = 0; j < FIELD_WIDTH; j++) {
-      switch (field[i][j]) {
+    for (int columnIndex = 0; columnIndex < FIELD_WIDTH; columnIndex++) {
+      switch (field[rowIndex][columnIndex]) {
         case EMPTINESS:
+          /*if (rowIndex > y + 1 && columnIndex == x + 1) {
+            colorize(119);
+          } else {
+            colorize(BACKGROUND_COLOR);
+          }*/
           cout << " ";
           break;
         case WALL:
+          colorize(WALLS_COLOR);
           cout << "#";
           break;
-        default:
+        case I_BLOCK:
+          colorize(I_COLOR);
           cout << "@";
+          break;
+        case J_BLOCK:
+          colorize(J_COLOR);
+          cout << "@";
+          break;
+        case Z_BLOCK:
+          colorize(Z_COLOR);
+          cout << "@";
+          break;
+        case S_BLOCK:
+          colorize(S_COLOR);
+          cout << "@";
+          break;
+        case T_BLOCK:
+          colorize(T_COLOR);
+          cout << "@";
+          break;
+        case O_BLOCK:
+          colorize(O_COLOR);
+          cout << "@";
+          break;
+        case L_BLOCK:
+          colorize(L_COLOR);
+          cout << "@";
+          break;
+        default:
           break;
       }
     }
     cout << endl;
   }
 
-  cout << "\nA: left\tS: down\tD: right \t Rotation[Space]";
+  cout << "\nA: left      S: down     D: right     W: Rotate";
 
   if (gameover) {
     system("cls");
@@ -233,12 +286,12 @@ void display() {
 }
 
 void initGame() {
-  for (int i = 0; i < FIELD_HEIGHT; i++) {
-    for (int j = 0; j < FIELD_WIDTH; j++) {
-      if ((j == 0) || (j == FIELD_WIDTH - 1) || (i == FIELD_HEIGHT - 1)) {
-        field[i][j] = stage[i][j] = 9;
+  for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < FIELD_WIDTH; columnIndex++) {
+      if ((columnIndex == 0) || (columnIndex == FIELD_WIDTH - 1) || (rowIndex == FIELD_HEIGHT - 1)) {
+        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = 9;
       } else {
-        field[i][j] = stage[i][j] = 0;
+        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = 0;
       }
     }
   }
@@ -252,20 +305,20 @@ bool makeBlocks() {
   setFigureIntitalPosition();
   srand(time(0));
 
-  int blockType = rand() % 7;
+  blockType = rand() % 7;
 
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      block[i][j] = 0;
-      block[i][j] = block_list[blockType][i][j];
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      block[rowIndex][columnIndex] = 0;
+      block[rowIndex][columnIndex] = block_list[blockType][rowIndex][columnIndex];
     }
   }
 
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      field[i][j + 4] = stage[i][j + 4] + block[i][j];
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      field[rowIndex][columnIndex + 4] = stage[rowIndex][columnIndex + 4] + block[rowIndex][columnIndex];
 
-      if (field[i][j + 4] > 1) {
+      if (field[rowIndex][columnIndex + 4] > 6) {
         gameover = true;
         return true;
       }
@@ -276,9 +329,9 @@ bool makeBlocks() {
 
 void moveBlock(int x2, int y2) {
   //Remove block
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      field[y + i][x + j] -= block[i][j];
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      field[y + rowIndex][x + columnIndex] -= block[rowIndex][columnIndex];
     }
   }
   //Update coordinates
@@ -286,9 +339,9 @@ void moveBlock(int x2, int y2) {
   y = y2;
 
   // assign a block with the updated value
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      field[y + i][x + j] += block[i][j];
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      field[y + rowIndex][x + columnIndex] += block[rowIndex][columnIndex];
     }
   }
 
@@ -297,33 +350,38 @@ void moveBlock(int x2, int y2) {
 
 void collidable() {
   int sameElementsCounter;
-  for (int i = 0; i < FIELD_HEIGHT; i++) {
+  for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; rowIndex++) {
     sameElementsCounter = 0;
-    for (int j = 0; j < FIELD_WIDTH; j++) {
-      stage[i][j] = field[i][j];
-      if (stage[i][j] == BLOCK) {
+    for (int columnIndex = 0; columnIndex < FIELD_WIDTH; columnIndex++) {
+      stage[rowIndex][columnIndex] = field[rowIndex][columnIndex];
+      if (stage[rowIndex][columnIndex] != EMPTINESS && stage[rowIndex][columnIndex] != WALL) {
         ++sameElementsCounter;
       }
     }
     if (sameElementsCounter == 10) {
-      cleanLine(i);
+      cleanLine(rowIndex);
     }
   }
 }
 
 void cleanLine(int lineNumber) {
-  for (int i = lineNumber; i > 2; --i) {
-    for (int j = 0; j < FIELD_WIDTH; ++j) {
-      field[i][j] = field[i-1][j];
-      stage[i][j] = stage[i-1][j];
+  for (int rowIndex = lineNumber; rowIndex > 2; --rowIndex) {
+    for (int columnIndex = 0; columnIndex < FIELD_WIDTH; ++columnIndex) {
+      field[rowIndex][columnIndex] = field[rowIndex-1][columnIndex];
+      stage[rowIndex][columnIndex] = stage[rowIndex-1][columnIndex];
     }
+  }
+  score += 10;
+  if (/*score % 100 == 0 &&*/ GAMESPEED != 100) {
+    ++level;
+    GAMESPEED -= 50;
   }
 }
 
 bool isCollide(int x2, int y2) {
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      if (block[i][j] && stage[y2 + i][x2 + j] != EMPTINESS) {
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      if (block[rowIndex][columnIndex] && stage[y2 + rowIndex][x2 + columnIndex] != EMPTINESS) {
         return true;
       }
     }
@@ -356,34 +414,34 @@ void userInput() {
 bool rotateBlock() {
   vector<vector<int>> tmp(4, vector<int>(4, 0));
 
-  for (int i = 0; i < 4; i++) {
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     //Save temporarily block
-    for (int j = 0; j < 4; j++) {
-      tmp[i][j] = block[i][j];
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      tmp[rowIndex][columnIndex] = block[rowIndex][columnIndex];
     }
   }
 
-  for (int i = 0; i < 4; i++) {
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     //Rotate
-    for (int j = 0; j < 4; j++) {
-      block[i][j] = tmp[3 - j][i];
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      block[rowIndex][columnIndex] = tmp[3 - columnIndex][rowIndex];
     }
   }
 
   if (isCollide(x, y)) {
     // And stop if it overlaps not be rotated
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        block[i][j] = tmp[i][j];
+    for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+      for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+        block[rowIndex][columnIndex] = tmp[rowIndex][columnIndex];
       }
     }
     return true;
   }
 
-  for (int i = 0; i < 4; i++) {
-    for (int j = 0; j < 4; j++) {
-      field[y + i][x + j] -= tmp[i][j];
-      field[y + i][x + j] += block[i][j];
+  for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
+    for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
+      field[y + rowIndex][x + columnIndex] -= tmp[rowIndex][columnIndex];
+      field[y + rowIndex][x + columnIndex] += block[rowIndex][columnIndex];
     }
   }
 
