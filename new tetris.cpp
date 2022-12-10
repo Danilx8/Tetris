@@ -32,7 +32,7 @@ void hideCursor() {
 
 const int PLAYERS_AMOUNT = 5;
 const int FIELD_HEIGHT = 22;
-const int FIELD_WIDTH = 5;
+const int FIELD_WIDTH = 63;
 enum {
   EMPTINESS = 0,
   I_BLOCK,
@@ -278,7 +278,7 @@ void gameLoop() {
 
 void setFigureIntitalPosition() {
   y = 0;
-  x = 2;
+  x = FIELD_WIDTH / 2;
 }
 
 int menu() {
@@ -431,9 +431,9 @@ bool makeBlocks() {
 
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
-      field[rowIndex][columnIndex + 4] = stage[rowIndex][columnIndex + 4] + block[rowIndex][columnIndex];
+      field[y + rowIndex][x + columnIndex] = stage[y + rowIndex][x + columnIndex] + block[rowIndex][columnIndex];
 
-      if (field[rowIndex][columnIndex + 4] > 7) {
+      if (field[y + rowIndex][x + columnIndex] > 7) {
         gameover = true;
         return true;
       }
@@ -470,7 +470,7 @@ void placeOnGround() {
         ++sameElementsCounter;
       }
     }
-    if (sameElementsCounter == 10) {
+    if (sameElementsCounter == FIELD_WIDTH - 2) {
       cleanLine(rowIndex);
     }
   }
@@ -478,7 +478,7 @@ void placeOnGround() {
 
 void cleanLine(int lineNumber) {
   for (int rowIndex = lineNumber; rowIndex > 2; --rowIndex) {
-    for (int columnIndex = 0; columnIndex < FIELD_WIDTH; ++columnIndex) {
+    for (int columnIndex = 1; columnIndex < FIELD_WIDTH - 1; ++columnIndex) {
       field[rowIndex][columnIndex] = field[rowIndex-1][columnIndex];
       stage[rowIndex][columnIndex] = stage[rowIndex-1][columnIndex];
     }
