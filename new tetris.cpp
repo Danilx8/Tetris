@@ -1,5 +1,6 @@
 #include <time.h>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <windows.h>
 #include <conio.h>
@@ -29,8 +30,9 @@ void hideCursor() {
   SetConsoleCursorInfo(consoleHandle, &info);
 }
 
+const int PLAYERS_AMOUNT = 5;
 const int FIELD_HEIGHT = 22;
-const int FIELD_WIDTH = 12;
+const int FIELD_WIDTH = 5;
 enum {
   EMPTINESS = 0,
   I_BLOCK,
@@ -67,7 +69,9 @@ int x;
 bool gameover = false;
 int GAMESPEED = 1000;
 int level = 0;
-int score = 0;
+string username;
+int userscore = 0;
+int highestScore = 0;
 int blockType;
 
 vector<vector<vector<int>>> block_list = {
@@ -115,16 +119,27 @@ vector<vector<vector<int>>> block_list = {
   }
 };
 
+struct leaderboardLine {
+  int place;
+  string name = "-";
+  int score;
+} players[PLAYERS_AMOUNT];
+
 int menu();
+void openLeaderboard(string, int);
+void getHighestScore(fstream&);
+void createLeaderboard();
+int saveResults(string, int);
+void showLeaderboard();
 int gameOver();
 void title();
 void gameLoop();
 void display();
 bool makeBlocks();
-void initGame();
+void initializeGame();
 void moveBlock(int, int);
-void collidable();
-bool isCollide(int, int);
+void placeOnGround();
+bool isOnGround(int, int);
 void userInput();
 bool rotateBlock();
 void spawnBlock();
@@ -137,19 +152,106 @@ int main() {
   return 0;
 }
 
+void openLeaderboard (string name, int score) {
+  fstream readingFile;
+  readingFile.open("leaderboard.txt");
+  if (readingFile.is_open()) {
+    getHighestScore(readingFile);
+    readingFile.close();
+  } else {
+    createLeaderboard();
+  }
+}
+
+void createLeaderboard() {
+  ofstream outfile ("leaderboard.txt");
+  for (int playerIndex = 0; playerIndex < PLAYERS_AMOUNT; ++playerIndex) {
+    players[playerIndex].place = playerIndex + 1;
+    outfile << players[playerIndex].place;
+    outfile << ' ';
+    outfile << players[playerIndex].name;
+    outfile << ' ';
+    outfile << players[playerIndex].score;
+    outfile << '\n';
+  }
+
+  outfile.close();
+}
+
+void getHighestScore(fstream& file) {
+  int temporaryPlaceVariable;
+  string temporaryNameVariable;
+
+  file >> temporaryPlaceVariable;
+  file >> temporaryNameVariable;
+  file >> highestScore;
+}
+
+int saveResults(string currentPlayerName, int currentPlayerScore ) {
+  fstream file ("leaderboard.txt");
+  for (int playerIndex = 0; playerIndex < PLAYERS_AMOUNT; ++playerIndex) {
+    file >> players[playerIndex].place;
+    file >> players[playerIndex].name;
+    file >> players[playerIndex].score;
+  }
+
+  int worsePlayerScore;
+  string worsePlayerName;
+  
+  for (int playerIndex = 0; playerIndex < PLAYERS_AMOUNT; ++playerIndex) {
+    if (currentPlayerScore > players[playerIndex].score) {
+      for (int worsePlayerIndex = playerIndex; worsePlayerIndex < PLAYERS_AMOUNT; ++worsePlayerIndex) {
+        worsePlayerScore = players[worsePlayerIndex].score;
+        worsePlayerName = players[worsePlayerIndex].name;
+        players[worsePlayerIndex].score = currentPlayerScore;
+        players[worsePlayerIndex].name = currentPlayerName;
+        currentPlayerScore = worsePlayerScore;
+        currentPlayerName = worsePlayerName;
+      }
+      file.close();
+      
+      fstream input;
+      input.open("leaderboard.txt", fstream::out | fstream::trunc);
+      for (int playerIndex = 0; playerIndex < PLAYERS_AMOUNT; ++playerIndex) {
+        input << '\t';
+        input << players[playerIndex].place;
+        input << ' ';
+        input << players[playerIndex].name;
+        input << ' ';
+        input << players[playerIndex].score;
+        input << '\n';
+      }
+      input.close();;
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void showLeaderboard() {
+  cout << "BEST RESULTS:\n";
+  for (int playerIndex = 0; playerIndex < PLAYERS_AMOUNT; ++playerIndex) {
+    cout << players[playerIndex].place << ' ' << players[playerIndex].name << ' '
+         << players[playerIndex].score << endl;
+  }
+}
+
 int gameOver() {
+  saveResults(username, userscore);
   cout << " d888b   .d8b.  .88b  d88. d88888b    .d88b.  db    db d88888b d8888b. \n"
        "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n"
        "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
        "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
        "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
-       " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n";
+       " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n\n";
+  showLeaderboard();
   cout << "\nPlay again? press y for yes or n for no:\n";
   char a;
   cin >> a;
   if (a == 'y' || a == 'Y') {
     gameover = false;
-    main();
+    userscore = 0;
+    menu();
   }
   return 0;
 }
@@ -157,7 +259,7 @@ int gameOver() {
 void gameLoop() {
   system("cls");
   hideCursor();
-  initGame();
+  initializeGame();
   auto start = chrono::steady_clock::now();
 
   while (!gameover) {
@@ -176,10 +278,13 @@ void gameLoop() {
 
 void setFigureIntitalPosition() {
   y = 0;
-  x = FIELD_WIDTH / 3;
+  x = 2;
 }
 
 int menu() {
+  cout << "Enter your name: ";
+  cin >> username;
+  openLeaderboard(username, userscore);
   title();
 
   int select_num = 0;
@@ -193,9 +298,11 @@ int menu() {
     case 2:
       break;
     case 3:
+      cout << "See you later!";
+      _getch();
       break;
     default:
-      cerr << "Choose 1~2" << endl;
+      cerr << "Choose 1~2~3" << endl;
       _getch();
       cin.clear();
       cin.ignore(numeric_limits<streamsize>::max(),'\n');
@@ -203,24 +310,29 @@ int menu() {
       main();
       break;
   }
-  system("cls");
-  return select_num;
+  return 0;
 }
 
 void title() {
   system("cls");
-
-  cout << "#==============================================================================#\n\n"
-       "          _|_|_|_|_|  _|_|_|_|  _|_|_|_|_|  _|_|_|    _|_|_|    _|_|_| \n"
-       "              _|      _|            _|      _|    _|    _|    _| \n"
-       "              _|      _|_|_|        _|      _|_|_|      _|      _|_| \n"
-       "              _|      _|            _|      _|    _|    _|          _| \n"
-       "              _|      _|_|_|_|      _|      _|    _|  _|_|_|   _|_|_| \n\n"
-       "                                1: Start Game\n"
-       "                                2:  Quit\n\n"
-       "Check your keyboard language and caps lock!\n"
-       "#==============================================================================#\n"
-       "Choose >> ";
+  colorize(244);
+  cout << "#================================================================================#\n"
+       "                                                                                  \n"
+       "                                                                                  \n"
+       "          _|_|_|_|_|  _|_|_|_|  _|_|_|_|_|  _|_|_|    _|_|_|    _|_|_|            \n"
+       "              _|      _|            _|      _|    _|    _|    _|                  \n"
+       "              _|      _|_|_|        _|      _|_|_|      _|      _|_|              \n"
+       "              _|      _|            _|      _|    _|    _|          _|            \n"
+       "              _|      _|_|_|_|      _|      _|    _|  _|_|_|   _|_|_|             \n"
+       "                                                                                  \n"
+       "                                1: Start Game                                     \n"
+       "                                2:  Quit                                          \n"
+       "                                                                                  \n"
+       "Check your keyboard language and caps lock!                                       \n"
+       "                                                                                  \n"
+       "#================================================================================#\n";
+  colorize(4);
+  cout << endl << "Choose >> ";
 }
 
 void display() {
@@ -277,7 +389,10 @@ void display() {
     cout << endl;
   }
 
-  cout << "\nA: left      S: down     D: right     W: Rotate";
+  cout << "\nA: left      S: down     D: right     W: Rotate\n\n";
+
+  cout << "Your score: " << userscore << endl;
+  cout << "Highest score: " << highestScore;
 
   if (gameover) {
     system("cls");
@@ -285,13 +400,13 @@ void display() {
   }
 }
 
-void initGame() {
+void initializeGame() {
   for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; rowIndex++) {
     for (int columnIndex = 0; columnIndex < FIELD_WIDTH; columnIndex++) {
       if ((columnIndex == 0) || (columnIndex == FIELD_WIDTH - 1) || (rowIndex == FIELD_HEIGHT - 1)) {
-        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = 9;
+        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = WALL;
       } else {
-        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = 0;
+        field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = EMPTINESS;
       }
     }
   }
@@ -318,7 +433,7 @@ bool makeBlocks() {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
       field[rowIndex][columnIndex + 4] = stage[rowIndex][columnIndex + 4] + block[rowIndex][columnIndex];
 
-      if (field[rowIndex][columnIndex + 4] > 6) {
+      if (field[rowIndex][columnIndex + 4] > 7) {
         gameover = true;
         return true;
       }
@@ -328,27 +443,24 @@ bool makeBlocks() {
 }
 
 void moveBlock(int x2, int y2) {
-  //Remove block
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
       field[y + rowIndex][x + columnIndex] -= block[rowIndex][columnIndex];
     }
   }
-  //Update coordinates
+
   x = x2;
   y = y2;
 
-  // assign a block with the updated value
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
       field[y + rowIndex][x + columnIndex] += block[rowIndex][columnIndex];
     }
   }
-
   display();
 }
 
-void collidable() {
+void placeOnGround() {
   int sameElementsCounter;
   for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; rowIndex++) {
     sameElementsCounter = 0;
@@ -371,14 +483,14 @@ void cleanLine(int lineNumber) {
       stage[rowIndex][columnIndex] = stage[rowIndex-1][columnIndex];
     }
   }
-  score += 10;
-  if (/*score % 100 == 0 &&*/ GAMESPEED != 100) {
+  userscore += 100;
+  if (userscore % 1000 == 0 && GAMESPEED != 100) {
     ++level;
     GAMESPEED -= 50;
   }
 }
 
-bool isCollide(int x2, int y2) {
+bool isOnGround(int x2, int y2) {
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
       if (block[rowIndex][columnIndex] && stage[y2 + rowIndex][x2 + columnIndex] != EMPTINESS) {
@@ -392,17 +504,17 @@ bool isCollide(int x2, int y2) {
 void userInput() {
   switch (_getch()) {
     case 'd':
-      if (!isCollide(x + 1, y)) {
+      if (!isOnGround(x + 1, y)) {
         moveBlock(x + 1, y);
       }
       break;
     case 'a':
-      if (!isCollide(x - 1, y)) {
+      if (!isOnGround(x - 1, y)) {
         moveBlock(x - 1, y);
       }
       break;
     case 's':
-      if (!isCollide(x, y + 1)) {
+      if (!isOnGround(x, y + 1)) {
         moveBlock(x, y + 1);
       }
       break;
@@ -412,27 +524,24 @@ void userInput() {
 }
 
 bool rotateBlock() {
-  vector<vector<int>> tmp(4, vector<int>(4, 0));
+  vector<vector<int>> temporaryMatrix(4, vector<int>(4, 0));
 
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
-    //Save temporarily block
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
-      tmp[rowIndex][columnIndex] = block[rowIndex][columnIndex];
+      temporaryMatrix[rowIndex][columnIndex] = block[rowIndex][columnIndex];
     }
   }
 
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
-    //Rotate
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
-      block[rowIndex][columnIndex] = tmp[3 - columnIndex][rowIndex];
+      block[rowIndex][columnIndex] = temporaryMatrix[3 - columnIndex][rowIndex];
     }
   }
 
-  if (isCollide(x, y)) {
-    // And stop if it overlaps not be rotated
+  if (isOnGround(x, y)) {
     for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
       for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
-        block[rowIndex][columnIndex] = tmp[rowIndex][columnIndex];
+        block[rowIndex][columnIndex] = temporaryMatrix[rowIndex][columnIndex];
       }
     }
     return true;
@@ -440,7 +549,7 @@ bool rotateBlock() {
 
   for (int rowIndex = 0; rowIndex < 4; rowIndex++) {
     for (int columnIndex = 0; columnIndex < 4; columnIndex++) {
-      field[y + rowIndex][x + columnIndex] -= tmp[rowIndex][columnIndex];
+      field[y + rowIndex][x + columnIndex] -= temporaryMatrix[rowIndex][columnIndex];
       field[y + rowIndex][x + columnIndex] += block[rowIndex][columnIndex];
     }
   }
@@ -451,10 +560,10 @@ bool rotateBlock() {
 }
 
 void spawnBlock() {
-  if (!isCollide(x, y + 1)) {
+  if (!isOnGround(x, y + 1)) {
     moveBlock(x, y + 1);
   } else {
-    collidable();
+    placeOnGround();
     makeBlocks();
     display();
   }
