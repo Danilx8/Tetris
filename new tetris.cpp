@@ -39,7 +39,7 @@ void hideCursor() {
 
 const int PLAYERS_AMOUNT = 5;
 const int FIELD_HEIGHT = 22;
-const int FIELD_WIDTH = 12;
+const int FIELD_WIDTH = 24;
 const int MATRIX_SIZE = 4;
 
 enum {
@@ -51,6 +51,7 @@ enum {
   T_BLOCK,
   O_BLOCK,
   L_BLOCK,
+  U_BLOCK,
   WALL = 9
 } elementsCodes;
 
@@ -61,6 +62,7 @@ const int S_COLOR = 10;
 const int T_COLOR = 13;
 const int O_COLOR = 14;
 const int L_COLOR = 6;
+const int U_COLOR = 12;
 const int REGULAR_TEXT_COLOR = 7;
 const int WALLS_COLOR = 15;
 const int BACKGROUND_COLOR = 0;
@@ -68,6 +70,7 @@ const int FAILURE_COLOR = 64;
 const int RESULTS_COLOR = 246;
 const int LOGO_COLOR = 244;
 const int FIRST_SCREEN_INPUT_COLOR = 4;
+const int TYPES_AMOUNT = 10;
 
 vector<vector<int>> stage(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
 vector<vector<int>> block = {
@@ -81,7 +84,7 @@ vector<vector<int>> field(FIELD_HEIGHT, vector<int>(FIELD_WIDTH, EMPTINESS));
 int y;
 int x;
 
-bool gameover = false;
+bool isGameover = false;
 int GAMESPEED = 1000;
 int level = 0;
 string username;
@@ -131,6 +134,24 @@ vector<vector<vector<int>>> block_list = {
     { 0, 7, 7, 0 },
     { 0, 0, 7, 0 },
     { 0, 0, 7, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+    { 8, 0, 0, 8 },
+    { 8, 8, 8, 8 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 1, 1, 1, 1 },
+    { 0, 1, 1, 0 },
+    { 0, 0, 0, 0 }
+  },
+  {
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
+    { 2, 0, 0, 0 },
+    { 2, 2, 0, 0 }
   }
 };
 
@@ -261,11 +282,11 @@ int gameOver() {
   
   colorize(FAILURE_COLOR);
   cout << " d888b   .d8b.  .88b  d88. d88888b    .d88b.  db    db d88888b d8888b. \n"
-       "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n"
-       "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
-       "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
-       "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
-       " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n\n";
+          "88' Y8b d8' `8b 88'YbdP`88 88'       .8P  Y8. 88    88 88'     88  `8D \n"
+          "88      88ooo88 88  88  88 88ooooo   88    88 Y8    8P 88ooooo 88oobY' \n"
+          "88  ooo 88~~~88 88  88  88 88~~~~~   88    88 `8b  d8' 88~~~~~ 88`8b   \n"
+          "88. ~8~ 88   88 88  88  88 88.       `8b  d8'  `8bd8'  88.     88 `88. \n"
+          " Y888P  YP   YP YP  YP  YP Y88888P    `Y88P'     YP    Y88888P 88   YD \n\n";
        
   showLeaderboard();
   cout << "\nPlay again? press y for yes or n for no:\n";
@@ -273,7 +294,7 @@ int gameOver() {
   char answer;
   cin >> answer;
   if (answer == 'y' || answer == 'Y') {
-    gameover = false;
+    isGameover = false;
     userscore = 0;
     system("cls");
     colorize(BACKGROUND_COLOR);
@@ -288,7 +309,7 @@ void gameLoop() {
   initializeGame();
   auto start = chrono::steady_clock::now();
 
-  while (!gameover) {
+  while (!isGameover) {
     auto end = chrono::steady_clock::now();
     auto passedTime = chrono::duration_cast<chrono::milliseconds>(end - start);
     if (kbhit()) {
@@ -402,6 +423,10 @@ void display() {
           colorize(L_COLOR);
           cout << "@";
           break;
+        case U_BLOCK:
+          colorize(U_COLOR);
+          cout << "@";
+          break;
         default:
           break;
       }
@@ -414,7 +439,7 @@ void display() {
   cout << "Your score: " << userscore << endl << "Current level: " << level;
   cout << "\n\nHighest score: " << highestScore;
 
-  if (gameover) {
+  if (isGameover) {
     system("cls");
     gameOver();
   }
@@ -423,7 +448,7 @@ void display() {
 void initializeGame() {
   for (int rowIndex = 0; rowIndex < FIELD_HEIGHT; ++rowIndex) {
     for (int columnIndex = 0; columnIndex < FIELD_WIDTH; ++columnIndex) {
-      if ((columnIndex == 0) || (columnIndex == FIELD_WIDTH - 1) || (rowIndex == FIELD_HEIGHT - 1)) {
+      if ((columnIndex == 0) || (columnIndex == FIELD_WIDTH - 1) || (rowIndex == FIELD_HEIGHT - 2)) {
         field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = WALL;
       } else {
         field[rowIndex][columnIndex] = stage[rowIndex][columnIndex] = EMPTINESS;
@@ -440,7 +465,7 @@ bool makeBlocks() {
   setFigureIntitalPosition();
   srand(time(0));
 
-  blockType = rand() % 7;
+  blockType = rand() % TYPES_AMOUNT;
 
   for (int rowIndex = 0; rowIndex < MATRIX_SIZE; ++rowIndex) {
     for (int columnIndex = 0; columnIndex < MATRIX_SIZE; ++columnIndex) {
@@ -454,7 +479,7 @@ bool makeBlocks() {
       field[y + rowIndex][x + columnIndex] = stage[y + rowIndex][x + columnIndex] + block[rowIndex][columnIndex];
 
       if (isOnGround(x, y)) {
-        gameover = true;
+        isGameover = true;
         return true;
       }
     }
@@ -511,8 +536,8 @@ void cleanLine(int lineNumber) {
 }
 
 bool isOnGround(int x2, int y2) {
-  for (int rowIndex = 0; rowIndex < 4; ++rowIndex) {
-    for (int columnIndex = 0; columnIndex < 4; ++columnIndex) {
+  for (int rowIndex = 0; rowIndex < MATRIX_SIZE; ++rowIndex) {
+    for (int columnIndex = 0; columnIndex < MATRIX_SIZE; ++columnIndex) {
       if (block[rowIndex][columnIndex] && stage[y2 + rowIndex][x2 + columnIndex] != EMPTINESS) {
         return true;
       }
