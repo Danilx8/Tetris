@@ -39,11 +39,11 @@ void hideCursor() {
 
 const int PLAYERS_AMOUNT = 5;
 const int FIELD_HEIGHT = 22;
-const int FIELD_WIDTH = 24;
+const int FIELD_WIDTH = 16;
 const int MATRIX_SIZE = 4;
 
 enum {
-  EMPTINESS = 0,
+  EMPTINESS,
   I_BLOCK,
   J_BLOCK,
   Z_BLOCK,
@@ -52,7 +52,7 @@ enum {
   O_BLOCK,
   L_BLOCK,
   U_BLOCK,
-  WALL = 9
+  WALL
 } elementsCodes;
 
 const int I_COLOR = 11;
@@ -92,7 +92,7 @@ int userscore = 0;
 int highestScore = 0;
 int blockType;
 
-vector<vector<vector<int>>> block_list = {
+vector<vector<vector<int>>> blockList = {
   {
     { 0, 1, 0, 0 },
     { 0, 1, 0, 0 },
@@ -341,13 +341,11 @@ int menu() {
       gameLoop();
       break;
     case 2:
-      break;
-    case 3:
       cout << "See you later!";
       _getch();
       break;
     default:
-      cerr << "Choose 1~2~3" << endl;
+      cerr << "Choose 1~2" << endl;
       _getch();
       cin.clear();
       cin.ignore(numeric_limits<streamsize>::max(),'\n');
@@ -470,7 +468,7 @@ bool makeBlocks() {
   for (int rowIndex = 0; rowIndex < MATRIX_SIZE; ++rowIndex) {
     for (int columnIndex = 0; columnIndex < MATRIX_SIZE; ++columnIndex) {
       block[rowIndex][columnIndex] = 0;
-      block[rowIndex][columnIndex] = block_list[blockType][rowIndex][columnIndex];
+      block[rowIndex][columnIndex] = blockList[blockType][rowIndex][columnIndex];
     }
   }
 
@@ -598,7 +596,6 @@ bool rotateBlock() {
       field[y + rowIndex][x + columnIndex] += block[rowIndex][columnIndex];
     }
   }
-
   display();
 
   return false;
