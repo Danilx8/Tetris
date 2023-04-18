@@ -1,46 +1,23 @@
 # Tetris
 
-A *simple* C++ string calculator for big numbers. It uses minimal amount of libraries, hence works really fast and doesn't require any additional measures for deployment. In order for this calculator to function properly, I wrote my own class BigInt, containing required methods and operations, realizing simple Object Oriented Programming principles.
+A console remake of the legendary Russian game! I used pretty basic, yet robust tools of C++ to create it.
 
-***
+### Features
+
+This project is not just a bare Tetris game, but also it includes several other features, important for any C++ developer: writing leaderboard into file, masterful work with console and ticks manipulation.
 
 ## Deployment
 
-Simply use the Git Bash console:
+Unfortunately, this game isn't cross-platform and uses resources of windows.h. Anyway, for Windows user the install procedure will be a gravy train!
+
+All you've got to do is to write the following command in your git console:
 
     $ git clone https://github.com/Danilx8/Tetris.git
     
-## Options
+## Game overview
 
-First enter the number. Initially, the number is set to 0.
+You can manipulate the figures, using WASD. The goal is extremely simple and, in case you would like to customize your gaming experience, the constants "FIELD_HEIGHT" and "FIELD_WIDTH" are easily adjustable.
 
-    enter value:
-    
-Next, you can do some simple mathematical operations, listed in the following line, on it:
-    
-    Enter operator (+ - * / < > = (! to quit)):
-   
-Most operators are obvious and return results of those. However, the comparison operators return either true or false, depending on the result of comparison
+In addition to basic Tetris figures the following ones were added:
 
-**Example of the code:**
-
-    enter value: 200000000000000000000000000000000000000
-    --> 200000000000000000000000000000000000000
-    Enter operator (+ - * / < > = (! to quit)): /
-    enter value: 9
-    --> 22222222222222222222222222222222222222
-    Enter operator (+ - * / < > = (! to quit)): * 12000000000000000000000000
-    enter value: --> 266666666666666666666666666666666666664000000000000000000000000
-    Enter operator (+ - * / < > = (! to quit)): <
-    enter value: 2
-    false
-    --> 266666666666666666666666666666666666664000000000000000000000000
-    Enter operator (+ - * / < > = (! to quit)): 1
-    enter value:
-    e
-    error with operator
-    --> 266666666666666666666666666666666666664000000000000000000000000
-    Enter operator (+ - * / < > = (! to quit)): !
-    266666666666666666666666666666666666664000000000000000000000000
-    
-As you can see, the program is fully working with numbers with many digits, even with such difficult operations as division. Also, the consolee program is robust, i.e. wrong input won't crush the program and just trigger the catch function.
+![Tetris figures](https://user-images.githubusercontent.com/108181060/232781621-0edf5ddb-4893-45f3-859f-b4bfcf934dea.png)
